@@ -51,8 +51,8 @@ for i=3:height(benchmarks)
             
                 % Load property to verify
                 property = load_vnnlib(specPath);
-                lb = property.lb; % input lower bounds
-                ub = property.ub; % input upper bounds
+                lb = single(property.lb); % input lower bounds
+                ub = single(property.ub); % input upper bounds
                 prop = property.prop; % output spec to verify
                 
                 
@@ -82,7 +82,7 @@ for i=3:height(benchmarks)
                 % Define reachability options
                 reachOptions = struct;
                 reachOptions.reachMethod = 'approx-star';
-                reachOptions.lp_solver = "glpk";
+                % reachOptions.lp_solver = "glpk";
                 
                 % Check if property was violated earlier
                 if iscell(counterEx)
