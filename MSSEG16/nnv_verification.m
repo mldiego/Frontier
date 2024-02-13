@@ -7,11 +7,11 @@ if ~isfolder("results")
 end
 
 % get list of neural networks and properties
-networks = dir('onnx/*.onnx');
+% networks = dir('onnx/*.onnx');
 specs = dir('vnnlib/*.vnnlib');
 
 % Analyze all benchmarks
-for i=1:height(networks)
+for i=1:height(specs)
 
     % Verification outline
     %  1) Load components
@@ -23,20 +23,27 @@ for i=1:height(networks)
 
      %% 1) Load components
 
+    % Get path to vnnlib specification
+    specPath = fullfile(specs(i).folder, specs(i).name);
+    sliceSize = split(specs(i).name, "_");
+    sliceSize = sliceSize{4};
+
+    % verify only those with sliceSize = 64 (for now)
+    if ~strcmp(sliceSize, '64')
+        continue
+    end
+
      % Get path to neural network
-    onnxPath = fullfile(networks(i).folder, networks(i).name);
+    onnxPath = "onnx/model"+sliceSize+".onnx";
     % load NN from onnx
     net = importONNXNetwork(onnxPath);
     % transform to NNV
     nnvnet = matlab2nnv(net);
     % get input size to resize input vectors into that shape
-    inputSize = net.Layers(1, 1).InputSize; 
-    
-    % Get path to vnnlib specification
-    specPath = fullfile(specs(i).folder, specs(i).name);
-
+    inputSize = net.Layers(1).InputSize; % slice size
+   
     % Create path to utput file (to save results)
-    outputfile = fullfile("../results", specs(i).name);
+    outputfile = fullfile("results", specs(i).name);
     outputfile = replace(outputfile, ".vnnlib", ".txt");
 
     % Load property to verify
@@ -71,8 +78,10 @@ for i=1:height(networks)
     
     % Define reachability options
     reachOptions = struct;
-    reachOptions.reachMethod = 'approx-star';
+    % reachOptions.reachMethod = 'approx-star';
     % reachOptions.lp_solver = "glpk";
+    reachOptions.reachMethod = 'relax-star-range';
+    reachOptions.relaxFactor = 0.95;
     
     % Check if property was violated earlier
     if iscell(counterEx)
@@ -93,11 +102,16 @@ for i=1:height(networks)
             end
             IS = ImageStar(lb, ub);
 
-            % Compute reachability
-            ySet = nnvnet.reach(IS, reachOptions);
-
-            % Verify property
-            status = verify_specification(ySet, prop);
+            
+            try
+                % Compute reachability
+                ySet = nnvnet.reach(IS, reachOptions);
+                
+                % Verify property
+                status = verify_specification(ySet, prop);
+            catch
+                status = -1; % error
+            end
     
         else % for code clarity other options have been cleared as all specs are the same
             status = -1;
