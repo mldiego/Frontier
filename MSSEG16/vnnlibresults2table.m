@@ -16,6 +16,7 @@ for i=1:height(resultsnnv)
     name = resultsnnv(i).name;
     name = split(name, '_');
     name = strjoin(name, '\\_');
+    name = replace(name, ".txt", "");
     [res, vt, ft] = processResultFile("results/"+resultsnnv(i).name);
     fprintf(fid, "$%s$ & %s & %f & %f \\", name, res, vt, ft);
     fprintf(fid, "\\");
